@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>시안 C: DB 출시 설정 상세</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Pretendard', -apple-system, sans-serif; background: #F5F5F8; color: #1A1A2E; font-size: 14px; }
+
+/* Sidebar */
+.sidebar { position: fixed; left: 0; top: 0; width: 200px; height: 100vh; background: #fff; border-right: 1px solid #EAEAF0; display: flex; flex-direction: column; padding: 20px 0; z-index: 100; }
+.sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 0 20px; margin-bottom: 28px; }
+.sidebar-brand-icon { width: 32px; height: 32px; background: #2D34FF; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; font-size: 14px; }
+.sidebar-brand-name { font-size: 15px; font-weight: 800; }
+.sidebar-section { padding: 0 12px; margin-bottom: 24px; }
+.sidebar-section-title { font-size: 10px; font-weight: 700; color: #A0A3BD; text-transform: uppercase; letter-spacing: 0.8px; padding: 0 8px; margin-bottom: 6px; }
+.sidebar-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 500; color: #6E7191; transition: 0.15s; }
+.sidebar-item:hover { background: #F5F5F8; color: #1A1A2E; }
+.sidebar-item.active { background: linear-gradient(135deg, #2D34FF, #6366F1); color: #fff; font-weight: 600; }
+.sidebar-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+.sidebar-item .item-badge { margin-left: auto; font-size: 10px; background: rgba(255,255,255,0.2); padding: 1px 7px; border-radius: 10px; font-weight: 700; }
+.sidebar-item:not(.active) .item-badge { background: #FEE2E2; color: #DC2626; }
+
+/* Main */
+.main { margin-left: 200px; min-height: 100vh; padding: 24px 28px; }
+
+/* Breadcrumb */
+.breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #6E7191; margin-bottom: 16px; }
+.breadcrumb a { color: #2D34FF; text-decoration: none; font-weight: 500; }
+.breadcrumb a:hover { text-decoration: underline; }
+
+/* Header */
+.page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+.page-header h1 { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+.page-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #6E7191; }
+.meta-tag { padding: 2px 8px; border-radius: 5px; font-weight: 600; font-size: 11px; }
+.meta-tag.blue { background: #EEF0FF; color: #2D34FF; }
+.header-actions { display: flex; gap: 8px; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: 0.2s; font-family: 'Pretendard'; }
+.btn-primary { background: linear-gradient(135deg, #2D34FF, #5B5FFF); color: #fff; box-shadow: 0 2px 8px rgba(45,52,255,0.25); }
+.btn-primary:hover { box-shadow: 0 4px 16px rgba(45,52,255,0.35); transform: translateY(-1px); }
+.btn-secondary { background: #fff; color: #374151; border: 1px solid #E5E7EB; }
+.btn-secondary:hover { background: #F5F5F8; }
+.btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+.btn-edit { background: #EEF0FF; color: #2D34FF; border: 1px solid #C7CAFF; }
+.btn-edit:hover { background: #E0E2FF; }
+.btn-edit.active-edit { background: #2D34FF; color: #fff; }
+.btn-warning { background: #FFF7ED; color: #C2410C; border: 1px solid #FED7AA; }
+.btn svg { width: 16px; height: 16px; }
+
+/* Series-level settings bar */
+.series-settings { display: flex; gap: 12px; margin-bottom: 20px; }
+.series-setting-card { flex: 1; background: #fff; border-radius: 14px; padding: 16px 20px; border: 1px solid #EAEAF0; }
+.ss-label { font-size: 10px; font-weight: 700; color: #A0A3BD; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 6px; }
+.ss-value { font-size: 14px; font-weight: 700; color: #1A1A2E; margin-bottom: 2px; }
+.ss-detail { font-size: 11px; color: #6E7191; }
+.ss-edit { font-size: 11px; color: #2D34FF; font-weight: 600; cursor: pointer; margin-top: 6px; display: inline-block; }
+.ss-edit:hover { text-decoration: underline; }
+.series-setting-card.warn { border-color: #FED7AA; background: #FFFBF5; }
+
+/* Edit Banner */
+.edit-banner { display: none; align-items: center; gap: 10px; padding: 10px 16px; background: #EEF0FF; border: 1px solid #C7CAFF; border-radius: 12px; margin-bottom: 16px; font-size: 13px; color: #2D34FF; font-weight: 600; }
+.edit-banner.show { display: flex; }
+.edit-banner .edit-actions { margin-left: auto; display: flex; gap: 6px; }
+
+/* Bulk Bar */
+.bulk-bar { display: none; align-items: center; gap: 12px; padding: 12px 16px; background: #F8F8FF; border: 1px dashed #C7CAFF; border-radius: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.bulk-bar.show { display: flex; }
+.bulk-bar label { font-size: 12px; font-weight: 600; color: #2D34FF; white-space: nowrap; }
+
+/* DB List Card */
+.db-list-card { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+.db-list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.db-list-title { font-size: 16px; font-weight: 800; }
+.db-list-count { font-size: 12px; color: #6E7191; margin-left: 8px; }
+.db-list-tools { display: flex; gap: 8px; align-items: center; }
+.search-input { display: flex; align-items: center; gap: 6px; background: #F5F5F8; border-radius: 8px; padding: 6px 12px; border: 1px solid transparent; }
+.search-input:focus-within { border-color: #2D34FF; background: #fff; }
+.search-input svg { width: 14px; height: 14px; color: #A0A3BD; }
+.search-input input { border: none; background: transparent; font-size: 12px; outline: none; width: 140px; font-family: 'Pretendard'; }
+
+/* DB Table */
+.db-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.db-table thead th { font-size: 10px; font-weight: 700; color: #A0A3BD; text-transform: uppercase; letter-spacing: 0.3px; padding: 8px 10px; text-align: left; border-bottom: 2px solid #EAEAF0; white-space: nowrap; }
+.db-table tbody tr { transition: 0.15s; }
+.db-table tbody tr:hover { background: #FAFAFF; }
+.db-table tbody tr.row-warn { background: #FFFBF5; }
+.db-table tbody td { padding: 10px; font-size: 13px; border-bottom: 1px solid #F5F5F8; vertical-align: middle; }
+
+/* Table cell elements */
+.cell-name { font-weight: 600; white-space: nowrap; }
+.cell-code { font-size: 10px; color: #A0A3BD; display: block; }
+/* Price display (read-only by default, looks like plain text) */
+.cell-price { font-size: 13px; font-weight: 600; color: #1A1A2E; white-space: nowrap; }
+.cell-price.auto { color: #6E7191; }
+.cell-price .price-badge { font-size: 9px; color: #A0A3BD; background: #F0F0F5; padding: 1px 5px; border-radius: 4px; margin-left: 4px; font-weight: 500; }
+.cell-price .price-badge.manual { background: #EEF0FF; color: #2D34FF; }
+/* Price input (edit mode only) */
+.price-edit-input { display: none; align-items: center; background: #fff; border: 1px solid #C7CAFF; border-radius: 6px; padding: 4px 8px; font-size: 12px; font-weight: 600; gap: 2px; }
+.price-edit-input.show { display: inline-flex; }
+.price-edit-input input { border: none; background: transparent; width: 55px; font-size: 12px; font-weight: 600; font-family: 'Pretendard'; outline: none; text-align: right; }
+.price-edit-input + .cell-price { display: inline; }
+.price-edit-input.show + .cell-price { display: none; }
+
+.status-tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 14px; font-size: 10px; font-weight: 600; white-space: nowrap; }
+.status-tag.done { background: #ECFDF5; color: #10B981; }
+.status-tag.pending { background: #FEF2F2; color: #EF4444; }
+.status-tag.review { background: #FFF7ED; color: #F59E0B; }
+.s-dot { width: 4px; height: 4px; border-radius: 50%; display: inline-block; }
+.status-tag.done .s-dot { background: #10B981; }
+.status-tag.pending .s-dot { background: #EF4444; }
+.status-tag.review .s-dot { background: #F59E0B; }
+
+/* Release date clickable */
+.release-date-display { cursor: pointer; padding: 2px 8px; border-radius: 6px; transition: 0.15s; border: 1px solid transparent; }
+.release-date-display:hover { background: #EEF0FF; border-color: #C7CAFF; color: #2D34FF; }
+
+/* Release date edit panel */
+.release-panel { padding: 20px; }
+.release-type-tabs { display: flex; gap: 0; margin-bottom: 16px; background: #F5F5F8; border-radius: 10px; padding: 3px; }
+.release-type-tab { flex: 1; padding: 8px 12px; text-align: center; font-size: 12px; font-weight: 600; color: #6E7191; border-radius: 8px; cursor: pointer; transition: 0.15s; }
+.release-type-tab.active { background: #fff; color: #2D34FF; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.release-type-tab:hover:not(.active) { color: #1A1A2E; }
+.release-date-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.release-date-row label { font-size: 12px; font-weight: 600; color: #6E7191; width: 60px; flex-shrink: 0; }
+.release-date-input { font-family: 'Pretendard'; font-size: 13px; font-weight: 500; border: 1px solid #EAEAF0; border-radius: 8px; padding: 8px 12px; outline: none; flex: 1; }
+.release-date-input:focus { border-color: #2D34FF; }
+.release-undecided { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 10px; font-size: 13px; color: #C2410C; font-weight: 500; cursor: pointer; transition: 0.15s; }
+.release-undecided:hover { background: #FEF2F2; border-color: #FCA5A5; }
+.release-undecided.selected { background: #FEF2F2; border-color: #EF4444; }
+.release-undecided svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+/* Thumbnail drop zone */
+.thumb-zone { position: relative; width: 36px; height: 48px; border-radius: 6px; border: 1.5px dashed #D1D5DB; background: #FAFAFC; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.15s; }
+.thumb-zone:hover { border-color: #2D34FF; background: #F8F8FF; }
+.thumb-zone.drag-over { border-color: #2D34FF; background: #EEF0FF; box-shadow: 0 0 0 3px rgba(45,52,255,0.12); }
+.thumb-zone.has-img { border-style: solid; border-color: #C7CAFF; background: linear-gradient(135deg, #C7CAFF, #EEF0FF); }
+.thumb-zone svg.thumb-icon { width: 16px; height: 16px; color: #A0A3BD; }
+.thumb-zone.has-img svg.thumb-icon { color: #2D34FF; }
+/* Delete btn overlay on thumb */
+.thumb-zone .del-btn { position: absolute; top: -6px; right: -6px; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 1px solid #EAEAF0; display: none; align-items: center; justify-content: center; font-size: 10px; color: #A0A3BD; cursor: pointer; z-index: 2; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.thumb-zone:hover .del-btn { display: flex; }
+.thumb-zone .del-btn:hover { background: #FEE2E2; border-color: #FCA5A5; color: #EF4444; }
+/* Tooltip filename on hover */
+.thumb-zone .thumb-tooltip { position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%); font-size: 9px; color: #6E7191; background: #1A1A2E; color: #fff; padding: 2px 6px; border-radius: 4px; white-space: nowrap; opacity: 0; pointer-events: none; transition: 0.15s; z-index: 5; }
+.thumb-zone:hover .thumb-tooltip { opacity: 1; }
+
+/* Attachment drop zone */
+.attach-zone { position: relative; display: flex; align-items: center; gap: 8px; border: 1.5px dashed #D1D5DB; border-radius: 8px; padding: 6px 10px; cursor: pointer; transition: 0.15s; min-height: 36px; }
+.attach-zone:hover { border-color: #2D34FF; background: #F8F8FF; }
+.attach-zone.drag-over { border-color: #2D34FF; background: #EEF0FF; box-shadow: 0 0 0 3px rgba(45,52,255,0.12); }
+.attach-zone.has-file { border-style: solid; border-color: #EAEAF0; background: #FAFAFC; }
+.attach-zone.has-file:hover { border-color: #C7CAFF; background: #F8F8FF; }
+.attach-zone svg.attach-icon-svg { width: 14px; height: 14px; color: #A0A3BD; flex-shrink: 0; }
+.attach-zone.has-file svg.attach-icon-svg { color: #2D34FF; }
+.attach-zone .az-text { font-size: 11px; color: #A0A3BD; }
+.attach-zone.has-file .az-text { color: #6E7191; }
+.attach-zone .az-filename { font-size: 11px; font-weight: 600; color: #1A1A2E; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Attach actions (download + delete) */
+.attach-zone .az-actions { display: none; margin-left: auto; gap: 4px; align-items: center; }
+.attach-zone.has-file:hover .az-actions { display: flex; }
+.az-action-btn { width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.1s; border: none; background: transparent; padding: 0; }
+.az-action-btn svg { width: 13px; height: 13px; }
+.az-action-btn.download { color: #2D34FF; }
+.az-action-btn.download:hover { background: #EEF0FF; }
+.az-action-btn.delete { color: #A0A3BD; }
+.az-action-btn.delete:hover { background: #FEE2E2; color: #EF4444; }
+
+.select-sm { background: #F5F5F8; border: 1px solid #EAEAF0; border-radius: 6px; padding: 4px 6px; font-size: 11px; font-weight: 500; font-family: 'Pretendard'; outline: none; }
+.select-sm:disabled { opacity: 0.7; }
+
+/* Group edit modal (inline) */
+.group-edit-panel { display: none; background: #fff; border-radius: 16px; padding: 20px; margin-bottom: 16px; border: 2px solid #C7CAFF; box-shadow: 0 4px 20px rgba(45,52,255,0.1); }
+.group-edit-panel.show { display: block; }
+.group-edit-title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.group-edit-desc { font-size: 12px; color: #6E7191; margin-bottom: 14px; }
+.group-option { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 10px; margin-bottom: 6px; cursor: pointer; border: 1px solid #EAEAF0; transition: 0.15s; }
+.group-option:hover { border-color: #C7CAFF; }
+.group-option.selected { border-color: #2D34FF; background: #F8F8FF; }
+.group-radio { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #D1D5DB; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.group-option.selected .group-radio { border-color: #2D34FF; }
+.group-radio-dot { width: 8px; height: 8px; border-radius: 50%; background: #2D34FF; display: none; }
+.group-option.selected .group-radio-dot { display: block; }
+.group-option-name { font-size: 13px; font-weight: 600; flex: 1; }
+.group-option-detail { font-size: 11px; color: #6E7191; }
+.group-option-value { font-size: 13px; font-weight: 700; color: #2D34FF; }
+.group-edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #EAEAF0; }
+
+/* Progress footer */
+.progress-footer { display: flex; align-items: center; gap: 16px; margin-top: 20px; padding: 16px 20px; background: #fff; border-radius: 14px; }
+.pf-bar { flex: 1; height: 8px; background: #E5E7EB; border-radius: 4px; overflow: hidden; }
+.pf-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #2D34FF, #6366F1); }
+.pf-text { font-size: 13px; font-weight: 700; white-space: nowrap; }
+.pf-detail { font-size: 12px; color: #6E7191; white-space: nowrap; }
+
+/* Toast */
+#toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1A1A2E; color: #fff; padding: 10px 20px; border-radius: 10px; font-size: 12px; font-weight: 600; z-index: 9999; transition: transform 0.3s; pointer-events: none; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+#toast.show { transform: translateX(-50%) translateY(0); }
+.watermark { position: fixed; bottom: 14px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #D1D5DB; z-index: 1000; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="sidebar-brand"><div class="sidebar-brand-icon">M</div><div class="sidebar-brand-name">수학비서</div></div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">메인</div>
+    <div class="sidebar-item"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1"/></svg>대시보드</div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">DB 관리</div>
+    <div class="sidebar-item"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 7v10c0 2 3.6 3 8 3s8-1 8-3V7M4 7c0 2 3.6 3 8 3s8-1 8-3M4 7c0-2 3.6-3 8-3s8 1 8 3"/></svg>DB 목록</div>
+    <div class="sidebar-item active"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>출시 설정<span class="item-badge">3</span></div>
+    <div class="sidebar-item"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>할인 그룹</div>
+    <div class="sidebar-item"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>DB그룹</div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-section-title">분석</div>
+    <div class="sidebar-item"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6m6 0h6m-6 0V9a2 2 0 012-2h2a2 2 0 012 2v10m6 0v-4a2 2 0 00-2-2h-2a2 2 0 00-2 2v4"/></svg>통계</div>
+    <div class="sidebar-item"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>변경 이력</div>
+  </div>
+  <div class="sidebar-section" style="margin-top:auto;">
+    <div class="sidebar-item"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>설정</div>
+  </div>
+</nav>
+
+<main class="main">
+  <div class="breadcrumb">
+    <a href="index.html">출시 설정</a>
+    <span style="color:#D1D5DB;">›</span>
+    <span>2026 수능완성 수학 I</span>
+  </div>
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h1>2026 수능완성 수학 I</h1>
+      <div class="page-meta">
+        <span class="meta-tag blue">수능완성 시리즈</span>
+        <span>DB-2026-001</span>
+        <span>·</span>
+        <span class="release-date-display" onclick="openGroupEdit('release')">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:13px;height:13px;vertical-align:-2px;margin-right:2px;"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span id="release-date-text">출시 예정: 2026.04.01</span>
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width:11px;height:11px;margin-left:2px;opacity:0.5;"><path d="M19 9l-7 7-7-7"/></svg>
+        </span>
+        <span>·</span>
+        <span>4개 DB</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>변경 이력</button>
+      <button class="btn btn-primary"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16"><path d="M5 13l4 4L19 7"/></svg>출시 준비 완료</button>
+    </div>
+  </div>
+
+  <!-- Series-level Settings (공통 그룹) -->
+  <div class="series-settings">
+    <div class="series-setting-card">
+      <div class="ss-label">할인 그룹</div>
+      <div class="ss-value">신규 DB 50% 상시 할인</div>
+      <div class="ss-detail">전체 DB 대상 · 상시 · 시리즈 공통 적용</div>
+      <span class="ss-edit" onclick="openGroupEdit('discount')">변경</span>
+    </div>
+    <div class="series-setting-card">
+      <div class="ss-label">DB 그룹 (상점 노출)</div>
+      <div class="ss-value">수능완성 그룹</div>
+      <div class="ss-detail">수능 시리즈 전용 · 12개 DB · 노출 2번째</div>
+      <span class="ss-edit" onclick="openGroupEdit('shop')">변경</span>
+    </div>
+    <div class="series-setting-card">
+      <div class="ss-label">DB 등급</div>
+      <div class="ss-value">프리미엄</div>
+      <div class="ss-detail">시리즈 전체 동일 등급 적용</div>
+      <span class="ss-edit" onclick="openGroupEdit('grade')">변경</span>
+    </div>
+    <div class="series-setting-card">
+      <div class="ss-label">중복문제 환급</div>
+      <div class="ss-value" style="color:#10B981;">ON</div>
+      <div class="ss-detail">시리즈 전체 환급 가능</div>
+      <span class="ss-edit" onclick="openGroupEdit('refund')">변경</span>
+    </div>
+  </div>
+
+  <!-- Group Edit Panels (hidden by default) -->
+  <div class="group-edit-panel" id="panel-discount">
+    <div class="group-edit-title">할인 그룹 변경</div>
+    <div class="group-edit-desc">이 시리즈 전체에 적용할 할인 그룹을 선택하세요</div>
+    <div class="group-option selected" onclick="selectGroupOption(this)"><div class="group-radio"><div class="group-radio-dot"></div></div><div class="group-option-name">신규 DB 50% 상시 할인</div><div class="group-option-detail">전체 DB 대상 · 상시</div><div class="group-option-value">50% OFF</div></div>
+    <div class="group-option" onclick="selectGroupOption(this)"><div class="group-radio"><div class="group-radio-dot"></div></div><div class="group-option-name">수능 시즌 특별 할인</div><div class="group-option-detail">수능완성 한정 · 2026.06~09</div><div class="group-option-value" style="color:#6E7191;">30% OFF</div></div>
+    <div class="group-option" onclick="selectGroupOption(this)"><div class="group-radio"><div class="group-radio-dot"></div></div><div class="group-option-name">1+1 번들 할인</div><div class="group-option-detail">2개 이상 구매 시 · 상시</div><div class="group-option-value" style="color:#6E7191;">20% OFF</div></div>
+    <div class="group-edit-actions"><button class="btn btn-sm btn-secondary" onclick="closeGroupEdit('discount')">취소</button><button class="btn btn-sm btn-primary" onclick="saveGroupEdit('discount')">저장</button></div>
+  </div>
+
+  <div class="group-edit-panel" id="panel-shop">
+    <div class="group-edit-title">DB 그룹 (상점 노출) 변경</div>
+    <div class="group-edit-desc">이 시리즈가 노출될 상점 DB그룹을 선택하세요</div>
+    <div class="group-option selected" onclick="selectGroupOption(this)"><div class="group-radio"><div class="group-radio-dot"></div></div><div class="group-option-name">수능완성 그룹</div><div class="group-option-detail">수능 시리즈 전용 · 12개 DB</div><div class="group-option-value">배정</div></div>
+    <div class="group-option" onclick="selectGroupOption(this)"><div class="group-radio"><div class="group-radio-dot"></div></div><div class="group-option-name">수학 전체 그룹</div><div class="group-option-detail">수학 전 영역 · 48개 DB</div><div class="group-option-value" style="color:#6E7191;">미배정</div></div>
+    <div class="group-option" onclick="selectGroupOption(this)"><div class="group-radio"><div class="group-radio-dot"></div></div><div class="group-option-name">신규 출시 그룹</div><div class="group-option-detail">최근 30일 출시 · 자동</div><div class="group-option-value" style="color:#6E7191;">미배정</div></div>
+    <div class="group-edit-actions"><button class="btn btn-sm btn-secondary" onclick="closeGroupEdit('shop')">취소</button><button class="btn btn-sm btn-primary" onclick="saveGroupEdit('shop')">저장</button></div>
+  </div>
+
+  <div class="group-edit-panel" id="panel-grade">
+    <div class="group-edit-title">DB 등급 변경</div>
+    <div class="group-edit-desc">시리즈 전체에 적용될 등급을 선택하세요</div>
+    <div class="group-option selected" onclick="selectGroupOption(this)"><div class="group-radio"><div class="group-radio-dot"></div></div><div class="group-option-name">프리미엄</div><div class="group-option-detail">높은 노출 우선순위 · 프리미엄 배지</div></div>
+    <div class="group-option" onclick="selectGroupOption(this)"><div class="group-radio"><div class="group-radio-dot"></div></div><div class="group-option-name">일반</div><div class="group-option-detail">기본 노출 · 일반 배지</div></div>
+    <div class="group-option" onclick="selectGroupOption(this)"><div class="group-radio"><div class="group-radio-dot"></div></div><div class="group-option-name">체험</div><div class="group-option-detail">무료 체험 · 체험 배지</div></div>
+    <div class="group-edit-actions"><button class="btn btn-sm btn-secondary" onclick="closeGroupEdit('grade')">취소</button><button class="btn btn-sm btn-primary" onclick="saveGroupEdit('grade')">저장</button></div>
+  </div>
+
+  <div class="group-edit-panel" id="panel-refund">
+    <div class="group-edit-title">중복문제 환급 설정</div>
+    <div class="group-edit-desc">시리즈 전체 환급 ON/OFF</div>
+    <div class="group-option selected" onclick="selectGroupOption(this)"><div class="group-radio"><div class="group-radio-dot"></div></div><div class="group-option-name" style="color:#10B981;">ON — 환급 가능</div><div class="group-option-detail">문제 중복 시 자동 환급</div></div>
+    <div class="group-option" onclick="selectGroupOption(this)"><div class="group-radio"><div class="group-radio-dot"></div></div><div class="group-option-name">OFF — 환급 불가</div><div class="group-option-detail">환급 기능 비활성화</div></div>
+    <div class="group-edit-actions"><button class="btn btn-sm btn-secondary" onclick="closeGroupEdit('refund')">취소</button><button class="btn btn-sm btn-primary" onclick="saveGroupEdit('refund')">저장</button></div>
+  </div>
+
+  <!-- Release Date Panel -->
+  <div class="group-edit-panel" id="panel-release">
+    <div class="release-panel">
+      <div class="group-edit-title">출시 예정일 설정</div>
+      <div class="group-edit-desc" style="margin-bottom:16px;">정확한 날짜, 기간, 또는 미정으로 설정할 수 있습니다</div>
+
+      <div class="release-type-tabs">
+        <div class="release-type-tab active" onclick="switchReleaseType(this, 'exact')">정확한 날짜</div>
+        <div class="release-type-tab" onclick="switchReleaseType(this, 'range')">기간 (앞~뒤)</div>
+        <div class="release-type-tab" onclick="switchReleaseType(this, 'undecided')">미정</div>
+      </div>
+
+      <!-- Exact date -->
+      <div id="release-exact" class="release-type-content">
+        <div class="release-date-row">
+          <label>출시일</label>
+          <input type="date" class="release-date-input" id="release-exact-date" value="2026-04-01">
+        </div>
+      </div>
+
+      <!-- Range -->
+      <div id="release-range" class="release-type-content" style="display:none;">
+        <div class="release-date-row">
+          <label>시작일</label>
+          <input type="date" class="release-date-input" id="release-start" value="2026-04-01">
+        </div>
+        <div class="release-date-row">
+          <label>종료일</label>
+          <input type="date" class="release-date-input" id="release-end" value="2026-04-15">
+        </div>
+        <div style="font-size:11px;color:#6E7191;padding-left:72px;">위 기간 내에 출시될 예정입니다</div>
+      </div>
+
+      <!-- Undecided -->
+      <div id="release-undecided" class="release-type-content" style="display:none;">
+        <div class="release-undecided selected">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <div>
+            <div style="font-weight:600;">출시일 미정</div>
+            <div style="font-size:11px;font-weight:400;margin-top:2px;">출시일이 확정되면 다시 설정해주세요. 대시보드에 "미정"으로 표시됩니다.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="group-edit-actions">
+        <button class="btn btn-sm btn-secondary" onclick="closeGroupEdit('release')">취소</button>
+        <button class="btn btn-sm btn-primary" onclick="saveReleaseDate()">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DB List (main content) -->
+  <div class="db-list-card">
+    <div class="db-list-header">
+      <div style="display:flex;align-items:center;">
+        <span class="db-list-title">DB 목록</span>
+        <span class="db-list-count">총 4개</span>
+      </div>
+      <div class="db-list-tools">
+        <div class="search-input">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <input type="text" placeholder="DB 번호 / 이름 검색...">
+        </div>
+        <button class="btn btn-edit btn-sm" id="main-edit-btn" onclick="toggleMainEdit()">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          수정
+        </button>
+      </div>
+    </div>
+
+    <!-- Edit Banner -->
+    <div class="edit-banner" id="main-edit-banner">
+      <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="16" height="16"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      편집 모드 — 가격, 썸네일, 첨부파일을 수정할 수 있습니다
+      <div class="edit-actions">
+        <button class="btn btn-sm btn-secondary" onclick="toggleMainEdit()">취소</button>
+        <button class="btn btn-sm btn-primary" onclick="saveMainEdit()">저장</button>
+      </div>
+    </div>
+
+    <!-- Bulk Price -->
+    <div class="bulk-bar" id="bulk-bar">
+      <label>💰 가격 일괄 적용</label>
+      <div class="cell-price" style="border-color:#C7CAFF;">
+        <input type="text" placeholder="가격" id="bulk-price" style="width:70px;"> 원
+      </div>
+      <button class="btn btn-sm btn-primary" onclick="bulkAll()">전체 적용</button>
+      <button class="btn btn-sm btn-warning" onclick="bulkEmpty()">자동→수동 일괄 변경</button>
+    </div>
+
+    <!-- The Big Table -->
+    <table class="db-table">
+      <thead>
+        <tr>
+          <th style="width:10%">DB 번호</th>
+          <th style="width:7%">썸네일</th>
+          <th style="width:28%">DB 이름</th>
+          <th style="width:18%">정가</th>
+          <th style="width:27%">첨부파일</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr data-dbno="10234" data-name="2026 수능완성 수학 I">
+          <td style="font-size:13px;font-weight:600;color:#6E7191;font-variant-numeric:tabular-nums;">10234</td>
+          <td>
+            <div class="thumb-zone has-img" onclick="thumbClick(this)" data-filename="thumb_math1.png">
+              <svg class="thumb-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14"/></svg>
+              <span class="del-btn" onclick="event.stopPropagation();thumbDelete(this)">&times;</span>
+              <span class="thumb-tooltip">thumb_math1.png</span>
+            </div>
+          </td>
+          <td><span class="cell-name">2026 수능완성 수학 I</span></td>
+          <td>
+            <div class="price-edit-input pf-wrap"><input type="text" value="15,000" class="pf"> 원</div>
+            <span class="cell-price">15,000원 <span class="price-badge">자동</span></span>
+          </td>
+          <td>
+            <div class="attach-zone has-file" onclick="attachClick(this)" data-filename="수능완성_수학I_정오표.pdf">
+              <svg class="attach-icon-svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+              <span class="az-filename">수능완성_수학I_정오표.pdf</span>
+              <div class="az-actions">
+                <button class="az-action-btn download" onclick="event.stopPropagation();showToast('다운로드 시작...')" title="다운로드"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></button>
+                <button class="az-action-btn delete" onclick="event.stopPropagation();attachDelete(this)" title="삭제"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr data-dbno="10235" data-name="2026 수능완성 수학 II">
+          <td style="font-size:13px;font-weight:600;color:#6E7191;font-variant-numeric:tabular-nums;">10235</td>
+          <td>
+            <div class="thumb-zone has-img" onclick="thumbClick(this)" data-filename="thumb_math2.png">
+              <svg class="thumb-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14"/></svg>
+              <span class="del-btn" onclick="event.stopPropagation();thumbDelete(this)">&times;</span>
+              <span class="thumb-tooltip">thumb_math2.png</span>
+            </div>
+          </td>
+          <td><span class="cell-name">2026 수능완성 수학 II</span></td>
+          <td>
+            <div class="price-edit-input pf-wrap"><input type="text" value="15,000" class="pf"> 원</div>
+            <span class="cell-price">15,000원 <span class="price-badge">자동</span></span>
+          </td>
+          <td>
+            <div class="attach-zone has-file" onclick="attachClick(this)" data-filename="수능완성_수학II_정오표.pdf">
+              <svg class="attach-icon-svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+              <span class="az-filename">수능완성_수학II_정오표.pdf</span>
+              <div class="az-actions">
+                <button class="az-action-btn download" onclick="event.stopPropagation();showToast('다운로드 시작...')" title="다운로드"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></button>
+                <button class="az-action-btn delete" onclick="event.stopPropagation();attachDelete(this)" title="삭제"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button>
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr data-dbno="10236" data-name="2026 수능완성 미적분">
+          <td style="font-size:13px;font-weight:600;color:#6E7191;font-variant-numeric:tabular-nums;">10236</td>
+          <td>
+            <div class="thumb-zone" onclick="thumbClick(this)">
+              <svg class="thumb-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+            </div>
+          </td>
+          <td><span class="cell-name">2026 수능완성 미적분</span></td>
+          <td>
+            <div class="price-edit-input pf-wrap"><input type="text" value="15,000" class="pf"> 원</div>
+            <span class="cell-price">15,000원 <span class="price-badge">자동</span></span>
+          </td>
+          <td>
+            <div class="attach-zone" onclick="attachClick(this)">
+              <svg class="attach-icon-svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+              <span class="az-text">클릭 또는 드래그</span>
+            </div>
+          </td>
+        </tr>
+        <tr data-dbno="10237" data-name="2026 수능완성 확률과통계">
+          <td style="font-size:13px;font-weight:600;color:#6E7191;font-variant-numeric:tabular-nums;">10237</td>
+          <td>
+            <div class="thumb-zone" onclick="thumbClick(this)">
+              <svg class="thumb-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+            </div>
+          </td>
+          <td><span class="cell-name">2026 수능완성 확률과통계</span></td>
+          <td>
+            <div class="price-edit-input pf-wrap"><input type="text" value="12,000" class="pf"> 원</div>
+            <span class="cell-price">12,000원 <span class="price-badge manual">수동</span></span>
+          </td>
+          <td>
+            <div class="attach-zone" onclick="attachClick(this)">
+              <svg class="attach-icon-svg" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4"/></svg>
+              <span class="az-text">클릭 또는 드래그</span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Progress Footer -->
+  <div class="progress-footer">
+    <span class="pf-text">출시 준비 현황</span>
+    <div class="pf-bar"><div class="pf-fill" style="width:62%"></div></div>
+    <span class="pf-detail">5/8 항목 완료 (62%)</span>
+    <button class="btn btn-primary btn-sm">출시 준비 완료</button>
+  </div>
+</main>
+
+<div class="watermark">시안 C · 상세 페이지 (리스트)</div>
+<div id="toast"></div>
+
+<script>
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// --- Main Edit Mode ---
+let isMainEditing = false;
+function toggleMainEdit() {
+  isMainEditing = !isMainEditing;
+  const btn = document.getElementById('main-edit-btn');
+  const banner = document.getElementById('main-edit-banner');
+  const bulk = document.getElementById('bulk-bar');
+
+  if (isMainEditing) {
+    btn.classList.add('active-edit');
+    btn.innerHTML = '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> 편집 중';
+    banner.classList.add('show');
+    bulk.classList.add('show');
+    document.querySelectorAll('.pf-wrap').forEach(w => w.classList.add('show'));
+    // Thumb/attach are always clickable, no edit mode needed for them
+    showToast('편집 모드로 전환되었습니다');
+  } else {
+    btn.classList.remove('active-edit');
+    btn.innerHTML = '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="14" height="14"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg> 수정';
+    banner.classList.remove('show');
+    bulk.classList.remove('show');
+    document.querySelectorAll('.pf-wrap').forEach(w => w.classList.remove('show'));
+    // Thumb/attach stay always clickable
+  }
+}
+function saveMainEdit() {
+  toggleMainEdit();
+  showToast('변경 사항이 저장되었습니다');
+}
+
+// Bulk price
+function bulkAll() {
+  const v = document.getElementById('bulk-price').value;
+  if (!v) return showToast('가격을 입력해주세요');
+  document.querySelectorAll('.pf').forEach(f => f.value = v);
+  showToast('전체 DB에 ' + v + '원 적용');
+}
+function bulkEmpty() {
+  const v = document.getElementById('bulk-price').value;
+  if (!v) return showToast('가격을 입력해주세요');
+  // Apply to all since none are empty - this is for manual override
+  document.querySelectorAll('.pf').forEach(f => f.value = v);
+  showToast('자동 계산 가격을 ' + v + '원으로 일괄 변경');
+}
+
+// --- Release Date ---
+let currentReleaseType = 'exact';
+function switchReleaseType(tab, type) {
+  currentReleaseType = type;
+  tab.parentElement.querySelectorAll('.release-type-tab').forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  document.getElementById('release-exact').style.display = type === 'exact' ? '' : 'none';
+  document.getElementById('release-range').style.display = type === 'range' ? '' : 'none';
+  document.getElementById('release-undecided').style.display = type === 'undecided' ? '' : 'none';
+}
+function saveReleaseDate() {
+  let text = '';
+  if (currentReleaseType === 'exact') {
+    const d = document.getElementById('release-exact-date').value;
+    text = '출시 예정: ' + d.replace(/-/g, '.');
+  } else if (currentReleaseType === 'range') {
+    const s = document.getElementById('release-start').value.replace(/-/g, '.');
+    const e = document.getElementById('release-end').value.replace(/-/g, '.');
+    text = '출시 예정: ' + s + ' ~ ' + e;
+  } else {
+    text = '출시일 미정';
+  }
+  document.getElementById('release-date-text').textContent = text;
+  closeGroupEdit('release');
+  showToast('출시 예정일이 변경되었습니다');
+}
+
+// --- Thumbnail ---
+function thumbClick(zone) {
+  if (zone.classList.contains('has-img')) {
+    showToast('썸네일 교체 파일 선택...');
+  } else {
+    simulateThumbUpload(zone, 'new_thumb.png');
+  }
+}
+function thumbDelete(btn) {
+  const zone = btn.closest('.thumb-zone');
+  zone.classList.remove('has-img');
+  zone.removeAttribute('data-filename');
+  const del = zone.querySelector('.del-btn'); if(del) del.remove();
+  const tip = zone.querySelector('.thumb-tooltip'); if(tip) tip.remove();
+  zone.querySelector('.thumb-icon').innerHTML = '<path d="M12 4v16m8-8H4"/>';
+  showToast('썸네일이 삭제되었습니다');
+}
+function simulateThumbUpload(zone, fname) {
+  zone.classList.add('has-img');
+  zone.dataset.filename = fname;
+  zone.querySelector('.thumb-icon').innerHTML = '<path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14"/>';
+  if (!zone.querySelector('.del-btn')) {
+    zone.insertAdjacentHTML('beforeend', '<span class="del-btn" onclick="event.stopPropagation();thumbDelete(this)">&times;</span>');
+  }
+  if (!zone.querySelector('.thumb-tooltip')) {
+    zone.insertAdjacentHTML('beforeend', '<span class="thumb-tooltip">' + fname + '</span>');
+  } else {
+    zone.querySelector('.thumb-tooltip').textContent = fname;
+  }
+  showToast('썸네일 "' + fname + '" 등록 완료');
+}
+
+// --- Attachment ---
+function attachClick(zone) {
+  if (zone.classList.contains('has-file')) {
+    showToast('첨부파일 교체 파일 선택...');
+  } else {
+    simulateAttachUpload(zone, '새_첨부파일.pdf');
+  }
+}
+function attachDelete(btn) {
+  const zone = btn.closest('.attach-zone');
+  zone.classList.remove('has-file');
+  zone.removeAttribute('data-filename');
+  zone.querySelector('.attach-icon-svg').innerHTML = '<path d="M12 4v16m8-8H4"/>';
+  const fn = zone.querySelector('.az-filename'); if(fn) fn.remove();
+  const ac = zone.querySelector('.az-actions'); if(ac) ac.remove();
+  if (!zone.querySelector('.az-text')) {
+    zone.insertAdjacentHTML('beforeend', '<span class="az-text">클릭 또는 드래그</span>');
+  }
+  showToast('첨부파일이 삭제되었습니다');
+}
+function simulateAttachUpload(zone, fname) {
+  zone.classList.add('has-file');
+  zone.dataset.filename = fname;
+  zone.querySelector('.attach-icon-svg').innerHTML = '<path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>';
+  const txt = zone.querySelector('.az-text'); if(txt) txt.remove();
+  if (!zone.querySelector('.az-filename')) {
+    zone.querySelector('.attach-icon-svg').insertAdjacentHTML('afterend', '<span class="az-filename">' + fname + '</span>');
+  }
+  if (!zone.querySelector('.az-actions')) {
+    zone.insertAdjacentHTML('beforeend', '<div class="az-actions"><button class="az-action-btn download" onclick="event.stopPropagation();showToast(\'다운로드 시작...\')" title="다운로드"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg></button><button class="az-action-btn delete" onclick="event.stopPropagation();attachDelete(this)" title="삭제"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></button></div>');
+  }
+  showToast('파일 "' + fname + '" 등록 완료');
+}
+
+// --- Drag and Drop ---
+document.querySelectorAll('.thumb-zone, .attach-zone').forEach(zone => {
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => { zone.classList.remove('drag-over'); });
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+    const fname = files[0].name;
+    if (zone.classList.contains('thumb-zone')) {
+      simulateThumbUpload(zone, fname);
+    } else {
+      simulateAttachUpload(zone, fname);
+    }
+  });
+});
+
+// Search by DB number or name
+document.querySelector('.search-input input').addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  document.querySelectorAll('.db-table tbody tr').forEach(row => {
+    const no = (row.dataset.dbno || '').toLowerCase();
+    const name = (row.dataset.name || '').toLowerCase();
+    row.style.display = (!q || no.includes(q) || name.includes(q)) ? '' : 'none';
+  });
+});
+
+// Toggle clicks
+document.querySelectorAll('.toggle-sm').forEach(t => {
+  t.addEventListener('click', function() {
+    if (!this.classList.contains('editable')) return;
+    this.classList.toggle('on');
+    this.classList.toggle('off');
+  });
+});
+
+// --- Group Edit Panels ---
+function openGroupEdit(type) {
+  document.querySelectorAll('.group-edit-panel').forEach(p => p.classList.remove('show'));
+  document.getElementById('panel-' + type).classList.add('show');
+}
+function closeGroupEdit(type) {
+  document.getElementById('panel-' + type).classList.remove('show');
+}
+function saveGroupEdit(type) {
+  closeGroupEdit(type);
+  showToast('그룹 설정이 저장되었습니다');
+}
+function selectGroupOption(el) {
+  el.parentElement.querySelectorAll('.group-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+</script>
+</body>
+</html>
